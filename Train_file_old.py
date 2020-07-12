@@ -15,6 +15,7 @@ import argparse
 #get our command line arguments
 def get_input_args():
     parser = argparse.ArgumentParser(description='Process values for arguments')
+    # Create 2 command line arguments: one for the flower image directory, the other for the architecture
     parser.add_argument('--dir', type = str, default = 'flowers/', help='Path to folder of images')
     parser.add_argument('--arch', type = str, default = 'vgg', help = "Architecture for the NN model")
     parser.add_argument('--hidden_units', type = int, default = 512, help = "Number of hidden training units")
@@ -33,10 +34,10 @@ print("epochs: ", args.epochs)
 print("flower categories file: ", args.flower_cat)
 
 print("Setting up directories, transforms, and dataloaders...")
-data_dir = args.dir#'flowers'
-train_dir = data_dir + 'train'
-valid_dir = data_dir + 'valid'
-test_dir = data_dir + 'test'
+data_dir = 'flowers'#args.dir
+train_dir = data_dir + '/train'
+valid_dir = data_dir + '/valid'
+test_dir = data_dir + '/test'
 
 #Dataset transforms
 train_transforms = transforms.Compose([transforms.Resize(255),
@@ -54,8 +55,8 @@ train_data = datasets.ImageFolder(train_dir, transform=train_transforms)
 valid_data = datasets.ImageFolder(train_dir, transform=valid_transforms)
 
 #Dataloaders
-train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=32, shuffle=True)
-valid_dataloader = torch.utils.data.DataLoader(valid_data, batch_size=32, shuffle=True)
+train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=24, shuffle=True)
+valid_dataloader = torch.utils.data.DataLoader(valid_data, batch_size=24, shuffle=True)
 
 #Make category to name dictionary
 print("setting up dictionary converter")
@@ -85,10 +86,10 @@ print("Setting up classifier")
                                  nn.Dropout(0.2),
                                  nn.Linear(512, 102),
                                  nn.LogSoftmax(dim=1))'''
-model.classifier = nn.Sequential(nn.Linear(1024, args.hidden_units),
+model.classifier = nn.Sequential(nn.Linear(1024, 512),
                                  nn.ReLU(),
                                  nn.Dropout(0.2),
-                                 nn.Linear(args.hidden_units, 256),
+                                 nn.Linear(512, 256),
                                  nn.ReLU(),
                                  nn.Dropout(0.2),
                                  nn.Linear(256, 102),
@@ -96,7 +97,7 @@ model.classifier = nn.Sequential(nn.Linear(1024, args.hidden_units),
 criterion = nn.NLLLoss()
 
 # Only train the classifier parameters, feature parameters are frozen
-optimizer = optim.Adam(model.classifier.parameters(), lr=args.learnrate)
+optimizer = optim.Adam(model.classifier.parameters(), lr=0.003)
 
 model.to(device);
 
@@ -105,7 +106,7 @@ print(model)
 # TODO: Do validation on the test set
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 train_losses, test_losses = [], []
-epochs = args.epochs
+epochs = 3
 steps = 0
 
 
@@ -123,7 +124,7 @@ for e in range(epochs):
         logps = model.forward(images)
         loss = criterion(logps, labels)
         loss.backward()
-        print("Epoch: ", e + 1, "Current Loss: ", loss)
+        print("Current Loss: ", loss)
         optimizer.step()
         running_loss += loss.item()
     else:
@@ -151,9 +152,7 @@ for e in range(epochs):
 
 #Save the checkpoint
 print("Saving checkpoint file")
-checkpoint = {'arch' : args.arch,
-              'classifier' : model.classifier,
-              'input_size': 1024,
+checkpoint = {'input_size': 25088,
               'output_size': 102,
               'epochs': 2,
               'state_dict': model.state_dict(),
