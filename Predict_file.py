@@ -10,6 +10,9 @@ from matplotlib.pyplot import imshow
 import numpy as np
 import json
 
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 data_dir = 'flowers'
 train_dir = data_dir + '/train'
 
@@ -20,7 +23,6 @@ train_transforms = transforms.Compose([transforms.Resize(255),
                                 transforms.Normalize((0.485, 0.485, 0.485), (0.229, 0.224, 0.225))])
 
 train_data = datasets.ImageFolder(train_dir, transform=train_transforms)
-
 
 with open('cat_to_name.json', 'r') as f:
     cat_to_name = json.load(f)
@@ -36,14 +38,15 @@ def load_checkpoint(filepath):
                                  nn.Dropout(0.2),
                                  nn.Linear(512, 102),
                                  nn.LogSoftmax(dim=1))'''
-    classifier = nn.Sequential(nn.Linear(1024, 600),
+    '''classifier = nn.Sequential(nn.Linear(1024, 600),
                                  nn.ReLU(),
                                  nn.Dropout(0.2),
                                  nn.Linear(600, 256),
                                  nn.ReLU(),
                                  nn.Dropout(0.2),
                                  nn.Linear(256, 102),
-                                 nn.LogSoftmax(dim=1))#checkpoint['classifier']
+                                 nn.LogSoftmax(dim=1))'''
+    classifier = checkpoint['classifier']
     #model = models.vgg11(pretrained=True)
     model = models.densenet121(pretrained = True)
     model.classifier = classifier
@@ -108,6 +111,9 @@ def predict(image_path, model, topk=5):
     '''
     img = Image.open(image_path)
     img = process_image(img)
+    
+    model.to(device)
+    img.to(device)
     
     log_ps = model.forward(img)
     ps = torch.exp(log_ps)
